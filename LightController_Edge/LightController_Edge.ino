@@ -6,30 +6,32 @@ int relay = 13;              // Tells Arduino the relay is connected to pin 13
 //to make the loop stateful...
 int lightControlStatus = 0; //0 = off, 1 = on
 int lightSensorStatus = 0;
-int universalTime = 0;
 
 //delay times -- in seconds
 int sensorDelay = 1;
-unsigned int secondsOfLight = 50000;//57600;
+unsigned int secondsOfLight = 57600; //16 * 60 * 60
+unsigned int lengthOfDay = 86400; //24 * 60 * 60
 
 
 void setup() 
 { 
   pinMode(relay, OUTPUT);
   Serial.begin(9600);
+  lightControl(lightControlStatus); //turn the light on to start
 }
 
 void loop()                  // Loops forever
 {
   time_t t = now();
-  if(t >= secondsOfLight){
+  if(t >= lengthOfDay){
+    setTime(0);
+    lightControl(lightControlStatus);
+  }
+  else if(t >= secondsOfLight){
     lightControl(lightControlStatus);
   }
   if(t % sensorDelay == 0){
     lightSensor(lightSensorStatus);
-  }
-  if(t >= 60000/*86400*/){
-    setTime(0);
   }
   delay(1000); //delay it for a second just to give it a break
 }
