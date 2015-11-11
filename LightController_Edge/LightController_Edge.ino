@@ -1,56 +1,58 @@
 #include <Time.h>  
 
-int relay = 13;              // Tells Arduino the relay is connected to pin 13
-#define CDS_INPUT 0
+#define TIME_MSG_LEN  11   // time sync to PC is HEADER followed by Unix time_t as ten ASCII digits
+#define TIME_HEADER  'T'   // Header tag for serial time sync message
+#define TIME_REQUEST  7    // ASCII bell character requests a time sync message 
 
-//to make the loop stateful...
-int lightControlStatus = 0; //0 = off, 1 = on
-int lightSensorStatus = 0;
+bool lightOff;
+int indicatorPin = 12;
+int switchPin = 13;
 
-//delay times -- in seconds
-int sensorDelay = 1;
-unsigned int secondsOfLight = 57600; //16 * 60 * 60
-unsigned int lengthOfDay = 86400; //24 * 60 * 60
+// T1262347200  //noon Jan 1 2010
 
-
-void setup() 
-{ 
-  pinMode(relay, OUTPUT);
+void setup()  {
   Serial.begin(9600);
-  lightControl(lightControlStatus); //turn the light on to start
+  time_t pctime = 0;   
+  setTime(pctime);
+  lightOff = true;
+  pinMode(switchPin, OUTPUT);
+  pinMode(indicatorPin, OUTPUT);
 }
 
-void loop()                  // Loops forever
-{
-  time_t t = now();
-  if(t >= lengthOfDay){
-    setTime(0);
-    lightControl(lightControlStatus);
-  }
-  else if(t >= secondsOfLight){
-    lightControl(lightControlStatus);
-  }
-  if(t % sensorDelay == 0){
-    lightSensor(lightSensorStatus);
-  }
-  delay(1000); //delay it for a second just to give it a break
+void loop(){    
+  digitalClockDisplay();  
+  delay(1000);
 }
 
-void lightControl(int currStatus){
-  switch(currStatus){
-    case 0: digitalWrite(relay, HIGH);
-      lightControlStatus = 1;
-      break;
-    case 1: digitalWrite(relay, LOW);
-      lightControlStatus = 0;
-      break;
+void digitalClockDisplay(){
+  // digital clock display of the time
+  Serial.print(hour());
+  printDigits(minute());
+  printDigits(second());
+  Serial.print(" ");
+  Serial.print(day());
+  Serial.print(" ");
+  Serial.print(month());
+  Serial.print(" ");
+  Serial.print(year()); 
+  Serial.println(); 
+  if(hour() == 0 && lightOff == true){
+    Serial.println("Begin light period");
+    digitalWrite(switchPin, HIGH);
+    digitalWrite(indicatorPin, LOW);
+    lightOff = false;
+  }else if(hour() == 16){
+    Serial.println("Begin light period");
+    digitalWrite(switchPin, LOW);
+    digitalWrite(indicatorPin, HIGH);
+    lightOff = true;
   }
 }
 
-void lightSensor(int currStatus){
-  switch(currStatus){
-    case 0: int value = analogRead(CDS_INPUT);
-      Serial.println(value);
-      break;
-  }
+void printDigits(int digits){
+  // utility function for digital clock display: prints preceding colon and leading 0
+  Serial.print(":");
+  if(digits < 10)
+    Serial.print('0');
+  Serial.print(digits);
 }
